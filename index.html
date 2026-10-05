@@ -1,0 +1,1028 @@
+<!DOCTYPE html>
+<html lang="lv">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Kuldīgas Dārgumu Labirints — Deluxe 3D</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700;900&family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+
+  <style>
+    :root {
+      --tilt-x: 0;
+      --tilt-y: 0;
+    }
+    body {
+      font-family: 'Inter', sans-serif;
+      touch-action: none;
+      -webkit-touch-callout: none;
+      -webkit-user-select: none;
+      user-select: none;
+      background-color: #0c0a09;
+    }
+    .font-ancient {
+      font-family: 'Cinzel', serif;
+    }
+    .perspective-stage {
+      perspective: 900px;
+    }
+    .tilt-board {
+      transform-style: preserve-3d;
+      transform: rotateX(calc(var(--tilt-y) * -12deg)) rotateY(calc(var(--tilt-x) * 12deg));
+      transition: transform 0.04s linear;
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.85), inset 0 0 35px rgba(0, 0, 0, 0.9);
+    }
+    .wood-bezel {
+      background: radial-gradient(circle at 50% 50%, #291c13 0%, #150d09 100%);
+      border: 6px solid #451a03;
+    }
+  </style>
+</head>
+<body class="text-stone-100 min-h-screen flex flex-col justify-between overflow-hidden">
+
+  <!-- Header -->
+  <header class="w-full bg-stone-950/80 backdrop-blur border-b border-amber-950/60 px-4 py-2.5 flex items-center justify-between z-20">
+    <div class="flex items-center space-x-2">
+      <span class="text-2xl drop-shadow">🪙</span>
+      <div>
+        <h1 class="font-ancient text-sm sm:text-base font-bold text-amber-400 tracking-wider">Kuldīgas Dārgums</h1>
+        <p class="text-[10px] text-stone-400" id="sensorStatus">Sensors: Neaktīvs</p>
+      </div>
+    </div>
+
+    <div class="flex items-center space-x-4 sm:space-x-6 text-xs sm:text-sm">
+      <div class="flex flex-col items-center">
+        <span class="text-[10px] text-stone-400 uppercase font-semibold">Līmenis</span>
+        <span class="font-bold text-amber-300" id="levelDisplay">1 / 3</span>
+      </div>
+      <div class="flex flex-col items-center">
+        <span class="text-[10px] text-stone-400 uppercase font-semibold">Laiks</span>
+        <span class="font-mono font-bold text-emerald-400" id="timerDisplay">00:00.0</span>
+      </div>
+      <button id="resetBtn" class="bg-stone-800 hover:bg-stone-700 active:scale-95 text-stone-200 px-2.5 py-1 rounded-md text-xs border border-stone-700 transition" title="Pārstartēt līmeni">
+        ↻ Atiestatīt
+      </button>
+    </div>
+  </header>
+
+  <!-- 3D Perspective Stage -->
+  <main class="relative flex-1 flex items-center justify-center p-2 sm:p-4 overflow-hidden perspective-stage">
+    <div id="tiltBox" class="relative w-full max-w-md aspect-[3/4] max-h-[75vh] rounded-2xl p-2.5 wood-bezel tilt-board flex items-center justify-center">
+      <canvas id="mazeCanvas" class="w-full h-full rounded-xl bg-stone-950 block shadow-inner"></canvas>
+
+      <!-- Tilt Visualizer Dot -->
+      <div id="tiltIndicator" class="absolute top-4 right-4 pointer-events-none bg-stone-950/80 border border-amber-900/60 rounded-full w-9 h-9 flex items-center justify-center opacity-85 backdrop-blur">
+        <div id="tiltDot" class="w-2.5 h-2.5 bg-amber-400 rounded-full shadow-[0_0_8px_#f59e0b] transition-transform duration-75"></div>
+      </div>
+
+      <!-- Permission / Start Modal -->
+      <div id="permissionOverlay" class="absolute inset-0 bg-stone-950/92 backdrop-blur-md rounded-2xl flex flex-col items-center justify-center p-6 text-center z-30 transition-opacity">
+        <div class="w-16 h-16 bg-amber-500/10 border-2 border-amber-500 text-amber-400 rounded-2xl flex items-center justify-center text-3xl mb-3 shadow-[0_0_20px_rgba(245,158,11,0.2)]">
+          🏛️
+        </div>
+        <h2 class="text-xl font-bold font-ancient text-amber-300 mb-1">Hercoga Sudraba Dālderis</h2>
+        <p class="text-stone-300 text-xs sm:text-sm mb-5 max-w-xs leading-relaxed">
+          Noliec telefonu, lai ripinātu monētu pāri Ventas rumbas straumēm un Kuldīgas senajam bruģim. Sargies no bedrēm un lēkājošām zivīm!
+        </p>
+        <button id="activateSensorsBtn" class="bg-amber-600 hover:bg-amber-500 active:scale-95 text-stone-950 font-bold px-6 py-3 rounded-xl text-sm shadow-lg shadow-amber-600/30 transition flex items-center space-x-2">
+          <span>Ieslēgt kustību sensoru</span>
+          <span>⚡</span>
+        </button>
+        <button id="useFallbackControlsBtn" class="mt-3 text-stone-400 hover:text-stone-200 text-xs underline underline-offset-4">
+          Spēlēt ar ekrāna pogām / klaviatūru
+        </button>
+      </div>
+
+      <!-- Victory Overlay Modal -->
+      <div id="victoryOverlay" class="hidden absolute inset-0 bg-stone-950/95 backdrop-blur-md rounded-2xl flex flex-col items-center justify-center p-6 text-center z-40">
+        <div class="text-5xl mb-2 animate-bounce">👑</div>
+        <h2 class="text-2xl font-bold font-ancient text-amber-300 mb-1">Dārgums Sasniegts!</h2>
+        <p class="text-xs text-stone-400 mb-4" id="victorySubtitle">Kuldīgas hercoga noslēpums ir atvērts.</p>
+
+        <div class="bg-stone-900/90 border border-amber-800/40 rounded-xl p-3.5 w-full max-w-xs mb-5 text-sm">
+          <div class="flex justify-between py-1 border-b border-stone-800">
+            <span class="text-stone-400">Patērētais laiks:</span>
+            <span class="font-mono font-bold text-emerald-400" id="completedTime">00:00.0</span>
+          </div>
+          <div class="flex justify-between py-1 border-b border-stone-800">
+            <span class="text-stone-400">Iekrišanas bedrēs:</span>
+            <span class="font-mono font-bold text-amber-400" id="holeFallsCount">0</span>
+          </div>
+          <div class="flex justify-between py-1">
+            <span class="text-stone-400">Statuss:</span>
+            <span class="font-bold text-amber-300" id="levelProgressStatus">Pabeigts</span>
+          </div>
+        </div>
+
+        <button id="nextLevelBtn" class="w-full max-w-xs bg-emerald-600 hover:bg-emerald-500 active:scale-95 text-white font-bold py-3 px-4 rounded-xl text-sm shadow-lg shadow-emerald-700/40 transition">
+          Nākamais Līmenis →
+        </button>
+      </div>
+    </div>
+  </main>
+
+  <!-- Footer Controls -->
+  <footer class="w-full bg-stone-950/90 border-t border-stone-800 px-4 py-2 flex flex-col sm:flex-row items-center justify-between z-20 gap-2">
+    <div class="text-[11px] text-stone-400 flex items-center space-x-2">
+      <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+      <span id="instructionText">Noliec telefonu, lai vadītu dālderi.</span>
+    </div>
+
+    <!-- On-screen Fallback Controls -->
+    <div id="touchControls" class="flex items-center space-x-1.5 opacity-90 scale-90 sm:scale-100">
+      <button data-dir="left" class="dpad-btn w-9 h-9 bg-stone-800 hover:bg-stone-700 active:bg-amber-600 rounded-lg flex items-center justify-center font-bold text-stone-200 border border-stone-700 text-sm">◀</button>
+      <div class="flex flex-col space-y-1">
+        <button data-dir="up" class="dpad-btn w-9 h-9 bg-stone-800 hover:bg-stone-700 active:bg-amber-600 rounded-lg flex items-center justify-center font-bold text-stone-200 border border-stone-700 text-sm">▲</button>
+        <button data-dir="down" class="dpad-btn w-9 h-9 bg-stone-800 hover:bg-stone-700 active:bg-amber-600 rounded-lg flex items-center justify-center font-bold text-stone-200 border border-stone-700 text-sm">▼</button>
+      </div>
+      <button data-dir="right" class="dpad-btn w-9 h-9 bg-stone-800 hover:bg-stone-700 active:bg-amber-600 rounded-lg flex items-center justify-center font-bold text-stone-200 border border-stone-700 text-sm">▶</button>
+    </div>
+  </footer>
+
+  <!-- Web Audio Procedural Sound Engine -->
+  <script>
+    class SoundEngine {
+      constructor() {
+        this.ctx = null;
+        this.rollGain = null;
+        this.rollFilter = null;
+        this.cobbleGain = null;
+      }
+
+      init() {
+        if (!this.ctx) {
+          const AudioContext = window.AudioContext || window.webkitAudioContext;
+          if (!AudioContext) return;
+          this.ctx = new AudioContext();
+
+          // 1. Continuous Rolling Metal Noise
+          const bufferSize = this.ctx.sampleRate * 2;
+          const noiseBuffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
+          const output = noiseBuffer.getChannelData(0);
+          let lastOut = 0.0;
+          for (let i = 0; i < bufferSize; i++) {
+            const white = Math.random() * 2 - 1;
+            output[i] = (lastOut + 0.02 * white) / 1.02; // Brown/pink noise
+            lastOut = output[i];
+          }
+
+          const whiteNoise = this.ctx.createBufferSource();
+          whiteNoise.buffer = noiseBuffer;
+          whiteNoise.loop = true;
+
+          this.rollFilter = this.ctx.createBiquadFilter();
+          this.rollFilter.type = 'lowpass';
+          this.rollFilter.frequency.setValueAtTime(280, this.ctx.currentTime);
+
+          this.rollGain = this.ctx.createGain();
+          this.rollGain.gain.setValueAtTime(0, this.ctx.currentTime);
+
+          whiteNoise.connect(this.rollFilter);
+          this.rollFilter.connect(this.rollGain);
+          this.rollGain.connect(this.ctx.destination);
+          whiteNoise.start();
+
+          // 2. Cobblestone Rumble Track
+          const cobbleNoise = this.ctx.createBufferSource();
+          cobbleNoise.buffer = noiseBuffer;
+          cobbleNoise.loop = true;
+          const cobbleFilter = this.ctx.createBiquadFilter();
+          cobbleFilter.type = 'bandpass';
+          cobbleFilter.frequency.setValueAtTime(140, this.ctx.currentTime);
+          cobbleFilter.Q.setValueAtTime(3.0, this.ctx.currentTime);
+
+          this.cobbleGain = this.ctx.createGain();
+          this.cobbleGain.gain.setValueAtTime(0, this.ctx.currentTime);
+
+          cobbleNoise.connect(cobbleFilter);
+          cobbleFilter.connect(this.cobbleGain);
+          this.cobbleGain.connect(this.ctx.destination);
+          cobbleNoise.start();
+        }
+        if (this.ctx && this.ctx.state === 'suspended') {
+          this.ctx.resume();
+        }
+      }
+
+      updateRoll(speed, isCobblestone = false) {
+        if (!this.ctx || !this.rollGain) return;
+        const normalized = Math.min(speed / 9, 1);
+        const targetVol = normalized > 0.04 ? normalized * 0.16 : 0;
+        const freq = 200 + normalized * 750;
+
+        this.rollGain.gain.setTargetAtTime(targetVol, this.ctx.currentTime, 0.05);
+        this.rollFilter.frequency.setTargetAtTime(freq, this.ctx.currentTime, 0.05);
+
+        if (this.cobbleGain) {
+          const cobbleVol = isCobblestone && normalized > 0.08 ? normalized * 0.28 : 0;
+          this.cobbleGain.gain.setTargetAtTime(cobbleVol, this.ctx.currentTime, 0.05);
+        }
+      }
+
+      bounce(strength = 1) {
+        if (!this.ctx) return;
+        try {
+          const osc1 = this.ctx.createOscillator();
+          const osc2 = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+
+          osc1.type = 'triangle';
+          osc2.type = 'sine';
+          const freq = 520 + Math.min(strength * 60, 400);
+          osc1.frequency.setValueAtTime(freq, this.ctx.currentTime);
+          osc2.frequency.setValueAtTime(freq * 1.5, this.ctx.currentTime);
+
+          const vol = Math.min(Math.max(strength * 0.08, 0.05), 0.35);
+          gain.gain.setValueAtTime(vol, this.ctx.currentTime);
+          gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.12);
+
+          osc1.connect(gain);
+          osc2.connect(gain);
+          gain.connect(this.ctx.destination);
+          osc1.start();
+          osc2.start();
+          osc1.stop(this.ctx.currentTime + 0.13);
+          osc2.stop(this.ctx.currentTime + 0.13);
+        } catch (e) {}
+      }
+
+      waterSplash() {
+        if (!this.ctx) return;
+        try {
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(260, this.ctx.currentTime);
+          osc.frequency.exponentialRampToValueAtTime(110, this.ctx.currentTime + 0.16);
+
+          gain.gain.setValueAtTime(0.12, this.ctx.currentTime);
+          gain.gain.linearRampToValueAtTime(0.001, this.ctx.currentTime + 0.16);
+
+          osc.connect(gain);
+          gain.connect(this.ctx.destination);
+          osc.start();
+          osc.stop(this.ctx.currentTime + 0.17);
+        } catch (e) {}
+      }
+
+      hole() {
+        if (!this.ctx) return;
+        try {
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+          osc.type = 'sawtooth';
+          osc.frequency.setValueAtTime(320, this.ctx.currentTime);
+          osc.frequency.exponentialRampToValueAtTime(45, this.ctx.currentTime + 0.45);
+
+          gain.gain.setValueAtTime(0.3, this.ctx.currentTime);
+          gain.gain.linearRampToValueAtTime(0.001, this.ctx.currentTime + 0.45);
+
+          osc.connect(gain);
+          gain.connect(this.ctx.destination);
+          osc.start();
+          osc.stop(this.ctx.currentTime + 0.46);
+        } catch (e) {}
+      }
+
+      win() {
+        if (!this.ctx) return;
+        try {
+          const notes = [523.25, 659.25, 783.99, 1046.50];
+          notes.forEach((freq, idx) => {
+            const osc = this.ctx.createOscillator();
+            const gain = this.ctx.createGain();
+            osc.type = 'triangle';
+            osc.frequency.setValueAtTime(freq, this.ctx.currentTime + idx * 0.1);
+
+            gain.gain.setValueAtTime(0.001, this.ctx.currentTime + idx * 0.1);
+            gain.gain.linearRampToValueAtTime(0.25, this.ctx.currentTime + idx * 0.1 + 0.03);
+            gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + idx * 0.1 + 0.45);
+
+            osc.connect(gain);
+            gain.connect(this.ctx.destination);
+            osc.start(this.ctx.currentTime + idx * 0.1);
+            osc.stop(this.ctx.currentTime + idx * 0.1 + 0.5);
+          });
+        } catch (e) {}
+      }
+    }
+
+    const sound = new SoundEngine();
+  </script>
+
+  <!-- Level Map Configurations with Kuldīga Specials -->
+  <script>
+    const LEVELS = [
+      {
+        name: "Ventas Rumba & Straumes",
+        start: { x: 0.14, y: 0.14 },
+        goal: { x: 0.86, y: 0.86, radius: 0.08 },
+        holes: [
+          { x: 0.50, y: 0.48, radius: 0.055 },
+          { x: 0.22, y: 0.76, radius: 0.055 }
+        ],
+        currents: [
+          { x: 0.40, y: 0.10, w: 0.45, h: 0.22, fx: 0.28, fy: 0.0, name: "Venta" }
+        ],
+        cobblestones: [
+          { x: 0.05, y: 0.40, w: 0.26, h: 0.30 }
+        ],
+        fishes: [
+          { x: 0.65, y: 0.10, rangeY: 0.20, speed: 0.003, size: 0.035, progress: 0 }
+        ],
+        walls: [
+          { x: 0.35, y: 0.00, w: 0.04, h: 0.40 },
+          { x: 0.65, y: 0.40, w: 0.04, h: 0.60 },
+          { x: 0.25, y: 0.65, w: 0.44, h: 0.04 }
+        ]
+      },
+      {
+        name: "Senais Ķieģeļu Tilts & Vimbas",
+        start: { x: 0.12, y: 0.12 },
+        goal: { x: 0.88, y: 0.88, radius: 0.075 },
+        holes: [
+          { x: 0.50, y: 0.22, radius: 0.05 },
+          { x: 0.30, y: 0.55, radius: 0.05 },
+          { x: 0.70, y: 0.68, radius: 0.05 }
+        ],
+        currents: [
+          { x: 0.52, y: 0.35, w: 0.40, h: 0.20, fx: -0.32, fy: 0.05, name: "Atvars" }
+        ],
+        cobblestones: [
+          { x: 0.05, y: 0.25, w: 0.38, h: 0.35 },
+          { x: 0.22, y: 0.72, w: 0.50, h: 0.22 }
+        ],
+        fishes: [
+          { x: 0.15, y: 0.40, rangeX: 0.25, speed: 0.004, size: 0.038, progress: 0.2 },
+          { x: 0.60, y: 0.42, rangeX: 0.28, speed: 0.0035, size: 0.038, progress: 0.7 }
+        ],
+        walls: [
+          { x: 0.00, y: 0.28, w: 0.45, h: 0.04 },
+          { x: 0.45, y: 0.28, w: 0.04, h: 0.38 },
+          { x: 0.60, y: 0.00, w: 0.04, h: 0.38 },
+          { x: 0.20, y: 0.68, w: 0.55, h: 0.04 }
+        ]
+      },
+      {
+        name: "Hercoga Jēkaba Krātuves Labirints",
+        start: { x: 0.12, y: 0.88 },
+        goal: { x: 0.50, y: 0.50, radius: 0.08 },
+        holes: [
+          { x: 0.22, y: 0.50, radius: 0.048 },
+          { x: 0.78, y: 0.50, radius: 0.048 },
+          { x: 0.50, y: 0.22, radius: 0.048 },
+          { x: 0.50, y: 0.78, radius: 0.048 }
+        ],
+        currents: [
+          { x: 0.28, y: 0.28, w: 0.44, h: 0.10, fx: 0.25, fy: 0.0, name: "Kanāls" }
+        ],
+        cobblestones: [
+          { x: 0.35, y: 0.40, w: 0.30, h: 0.25 }
+        ],
+        fishes: [
+          { x: 0.50, y: 0.32, rangeX: 0.20, speed: 0.0045, size: 0.035, progress: 0 }
+        ],
+        walls: [
+          { x: 0.25, y: 0.25, w: 0.50, h: 0.035 },
+          { x: 0.75, y: 0.25, w: 0.035, h: 0.50 },
+          { x: 0.25, y: 0.75, w: 0.535, h: 0.035 },
+          { x: 0.25, y: 0.38, w: 0.035, h: 0.37 },
+          { x: 0.38, y: 0.38, w: 0.25, h: 0.035 }
+        ]
+      }
+    ];
+  </script>
+
+  <!-- Core Game Mechanics & Render Loop -->
+  <script>
+    const canvas = document.getElementById('mazeCanvas');
+    const ctx = canvas.getContext('2d');
+    const tiltBox = document.getElementById('tiltBox');
+    const tiltDot = document.getElementById('tiltDot');
+    const sensorStatusText = document.getElementById('sensorStatus');
+    const instructionText = document.getElementById('instructionText');
+    const timerDisplay = document.getElementById('timerDisplay');
+    const levelDisplay = document.getElementById('levelDisplay');
+    const victoryOverlay = document.getElementById('victoryOverlay');
+    const permissionOverlay = document.getElementById('permissionOverlay');
+
+    let width = 0;
+    let height = 0;
+    let currentLevelIndex = 0;
+
+    let ball = {
+      x: 0,
+      y: 0,
+      vx: 0,
+      vy: 0,
+      radius: 12,
+      rotation: 0,
+      isFalling: false,
+      fallScale: 1
+    };
+
+    let tiltX = 0;
+    let tiltY = 0;
+    let dpad = { up: false, down: false, left: false, right: false };
+
+    let startTime = 0;
+    let fallsInHole = 0;
+    let isGameActive = false;
+    let screenShake = 0;
+    let particles = [];
+    let waterWaveOffset = 0;
+
+    class Particle {
+      constructor(x, y, color, speed = 2, life = 1) {
+        this.x = x;
+        this.y = y;
+        const angle = Math.random() * Math.PI * 2;
+        const spd = Math.random() * speed;
+        this.vx = Math.cos(angle) * spd;
+        this.vy = Math.sin(angle) * spd;
+        this.color = color;
+        this.life = life;
+        this.maxLife = life;
+        this.size = Math.random() * 3 + 1.5;
+      }
+      update() {
+        this.x += this.vx;
+        this.y += this.vy;
+        this.life -= 0.025;
+      }
+      draw(c) {
+        if (this.life <= 0) return;
+        c.save();
+        c.globalAlpha = Math.max(0, this.life / this.maxLife);
+        c.fillStyle = this.color;
+        c.beginPath();
+        c.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+        c.fill();
+        c.restore();
+      }
+    }
+
+    function spawnParticles(x, y, count, color, speed = 3) {
+      for (let i = 0; i < count; i++) {
+        particles.push(new Particle(x, y, color, speed, 0.8 + Math.random() * 0.4));
+      }
+    }
+
+    function resizeCanvas() {
+      const rect = canvas.getBoundingClientRect();
+      const dpr = window.devicePixelRatio || 1;
+      width = rect.width;
+      height = rect.height;
+      canvas.width = width * dpr;
+      canvas.height = height * dpr;
+      ctx.scale(dpr, dpr);
+
+      ball.radius = Math.max(width * 0.038, 9);
+      if (!isGameActive) resetBallPosition();
+    }
+
+    window.addEventListener('resize', resizeCanvas);
+
+    function resetBallPosition() {
+      const lvl = LEVELS[currentLevelIndex];
+      ball.x = lvl.start.x * width;
+      ball.y = lvl.start.y * height;
+      ball.vx = 0;
+      ball.vy = 0;
+      ball.rotation = 0;
+      ball.isFalling = false;
+      ball.fallScale = 1;
+    }
+
+    function startGame() {
+      isGameActive = true;
+      startTime = performance.now();
+      fallsInHole = 0;
+      levelDisplay.innerText = `${currentLevelIndex + 1} / ${LEVELS.length}`;
+      resetBallPosition();
+      requestAnimationFrame(gameLoop);
+    }
+
+    // Physics Engine
+    const ACCEL = 0.62;
+    const FRICTION = 0.962;
+    const BOUNCE = 0.48;
+
+    function updatePhysics() {
+      waterWaveOffset += 0.06;
+      const lvl = LEVELS[currentLevelIndex];
+
+      // Screen shake decay
+      if (screenShake > 0) screenShake *= 0.85;
+      if (screenShake < 0.2) screenShake = 0;
+
+      // Update Particle array
+      particles = particles.filter(p => p.life > 0);
+      particles.forEach(p => p.update());
+
+      // Update Animated Obstacles (Ventas Zivis / Vimbas)
+      if (lvl.fishes) {
+        lvl.fishes.forEach(fish => {
+          fish.progress += fish.speed;
+          if (fish.progress > 1) fish.progress = 0;
+
+          let fx = fish.x * width;
+          let fy = fish.y * height;
+          if (fish.rangeX) {
+            fx += Math.sin(fish.progress * Math.PI * 2) * (fish.rangeX * width);
+          }
+          if (fish.rangeY) {
+            fy += Math.sin(fish.progress * Math.PI * 2) * (fish.rangeY * height);
+          }
+
+          // Fish collision with silver coin
+          if (!ball.isFalling) {
+            const fRadius = fish.size * width;
+            const dist = Math.hypot(ball.x - fx, ball.y - fy);
+            if (dist < ball.radius + fRadius) {
+              const pushAngle = Math.atan2(ball.y - fy, ball.x - fx);
+              ball.vx += Math.cos(pushAngle) * 5;
+              ball.vy += Math.sin(pushAngle) * 5;
+              sound.bounce(3.5);
+              screenShake = 6;
+              spawnParticles(ball.x, ball.y, 8, '#38bdf8', 4);
+              if (navigator.vibrate) navigator.vibrate(60);
+            }
+          }
+        });
+      }
+
+      if (ball.isFalling) {
+        ball.fallScale -= 0.05;
+        ball.vx *= 0.82;
+        ball.vy *= 0.82;
+        ball.rotation += 0.2;
+        if (ball.fallScale <= 0.05) {
+          resetBallPosition();
+        }
+        return;
+      }
+
+      // Input blending
+      let fx = tiltX;
+      let fy = tiltY;
+      if (dpad.left) fx -= 0.85;
+      if (dpad.right) fx += 0.85;
+      if (dpad.up) fy -= 0.85;
+      if (dpad.down) fy += 0.85;
+
+      // 1. Water Current Force
+      let inWater = false;
+      if (lvl.currents) {
+        lvl.currents.forEach(c => {
+          const cx = c.x * width;
+          const cy = c.y * height;
+          const cw = c.w * width;
+          const ch = c.h * height;
+          if (ball.x >= cx && ball.x <= cx + cw && ball.y >= cy && ball.y <= cy + ch) {
+            inWater = true;
+            ball.vx += c.fx * 0.7;
+            ball.vy += c.fy * 0.7;
+            if (Math.random() < 0.25) {
+              spawnParticles(ball.x, ball.y, 1, '#38bdf8', 1.5);
+            }
+          }
+        });
+      }
+
+      // 2. Cobblestone Surface Friction & Rumble
+      let inCobblestone = false;
+      if (lvl.cobblestones) {
+        lvl.cobblestones.forEach(cb => {
+          const cx = cb.x * width;
+          const cy = cb.y * height;
+          const cw = cb.w * width;
+          const ch = cb.h * height;
+          if (ball.x >= cx && ball.x <= cx + cw && ball.y >= cy && ball.y <= cy + ch) {
+            inCobblestone = true;
+            ball.vx *= 0.94; // Extra friction
+            ball.vy *= 0.94;
+            // Cobblestone micro-jitter
+            ball.x += (Math.random() - 0.5) * 0.7;
+            ball.y += (Math.random() - 0.5) * 0.7;
+          }
+        });
+      }
+
+      // Physics acceleration
+      ball.vx += fx * ACCEL;
+      ball.vy += fy * ACCEL;
+      ball.vx *= FRICTION;
+      ball.vy *= FRICTION;
+
+      ball.x += ball.vx;
+      ball.y += ball.vy;
+
+      // Realistic Coin Rolling Rotation
+      const currentSpeed = Math.hypot(ball.vx, ball.vy);
+      if (currentSpeed > 0.05) {
+        const moveAngle = Math.atan2(ball.vy, ball.vx);
+        ball.rotation += currentSpeed / ball.radius;
+      }
+
+      // Sound update (metal rolling + cobble rumble)
+      sound.updateRoll(currentSpeed, inCobblestone);
+
+      // Boundary Collisions
+      if (ball.x - ball.radius < 0) {
+        ball.x = ball.radius;
+        ball.vx = -ball.vx * BOUNCE;
+        onWallHit(Math.abs(ball.vx));
+      } else if (ball.x + ball.radius > width) {
+        ball.x = width - ball.radius;
+        ball.vx = -ball.vx * BOUNCE;
+        onWallHit(Math.abs(ball.vx));
+      }
+      if (ball.y - ball.radius < 0) {
+        ball.y = ball.radius;
+        ball.vy = -ball.vy * BOUNCE;
+        onWallHit(Math.abs(ball.vy));
+      } else if (ball.y + ball.radius > height) {
+        ball.y = height - ball.radius;
+        ball.vy = -ball.vy * BOUNCE;
+        onWallHit(Math.abs(ball.vy));
+      }
+
+      // Interior Wall Collisions
+      lvl.walls.forEach(wall => {
+        const wx = wall.x * width;
+        const wy = wall.y * height;
+        const ww = wall.w * width;
+        const wh = wall.h * height;
+
+        const closestX = Math.max(wx, Math.min(ball.x, wx + ww));
+        const closestY = Math.max(wy, Math.min(ball.y, wy + wh));
+
+        const dx = ball.x - closestX;
+        const dy = ball.y - closestY;
+        const distSq = dx * dx + dy * dy;
+
+        if (distSq < ball.radius * ball.radius) {
+          const dist = Math.sqrt(distSq) || 0.0001;
+          const overlap = ball.radius - dist;
+          const nx = dx / dist;
+          const ny = dy / dist;
+
+          ball.x += nx * overlap;
+          ball.y += ny * overlap;
+
+          const dot = ball.vx * nx + ball.vy * ny;
+          ball.vx = (ball.vx - (1 + BOUNCE) * dot * nx);
+          ball.vy = (ball.vy - (1 + BOUNCE) * dot * ny);
+
+          const hitSpeed = Math.hypot(ball.vx, ball.vy);
+          onWallHit(hitSpeed);
+        }
+      });
+
+      // Hole Gravity Well / Pitfall Physics
+      lvl.holes.forEach(hole => {
+        const hx = hole.x * width;
+        const hy = hole.y * height;
+        const hr = hole.radius * width;
+        const dx = hx - ball.x;
+        const dy = hy - ball.y;
+        const dist = Math.hypot(dx, dy);
+
+        // Gravitational suction within vicinity
+        if (dist < hr * 1.5 && !ball.isFalling) {
+          const pull = (1 - dist / (hr * 1.5)) * 0.42;
+          ball.vx += (dx / dist) * pull;
+          ball.vy += (dy / dist) * pull;
+        }
+
+        // Falling in hole
+        if (dist < hr * 0.72 && !ball.isFalling) {
+          ball.isFalling = true;
+          fallsInHole++;
+          screenShake = 9;
+          sound.hole();
+          spawnParticles(hx, hy, 18, '#1e1b4b', 3);
+          if (navigator.vibrate) navigator.vibrate([100, 60, 100]);
+        }
+      });
+
+      // Goal / Treasure Reached
+      const gx = lvl.goal.x * width;
+      const gy = lvl.goal.y * height;
+      const gr = lvl.goal.radius * width;
+      if (Math.hypot(ball.x - gx, ball.y - gy) < gr * 0.7 && !ball.isFalling) {
+        onLevelVictory();
+      }
+    }
+
+    function onWallHit(speed) {
+      if (speed > 1.2) {
+        sound.bounce(speed);
+        spawnParticles(ball.x, ball.y, Math.min(Math.floor(speed * 1.5), 8), '#b45309', speed * 0.8);
+        if (speed > 4) {
+          screenShake = Math.min(speed * 1.4, 7);
+          if (navigator.vibrate) navigator.vibrate(35);
+        }
+      }
+    }
+  </script>
+
+  <!-- Canvas Rendering Engine -->
+  <script>
+    function drawGame() {
+      ctx.save();
+      // Apply screen shake
+      if (screenShake > 0) {
+        const shakeX = (Math.random() - 0.5) * screenShake * 2;
+        const shakeY = (Math.random() - 0.5) * screenShake * 2;
+        ctx.translate(shakeX, shakeY);
+      }
+
+      ctx.clearRect(-10, -10, width + 20, height + 20);
+
+      // Light direction calculated from device tilt
+      const lightOffX = -tiltX * 14;
+      const lightOffY = -tiltY * 14;
+
+      // 1. Wood Parquet / Floor Background
+      ctx.fillStyle = '#1c1511';
+      ctx.fillRect(0, 0, width, height);
+
+      // Floor plank lines
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.025)';
+      ctx.lineWidth = 1;
+      const step = width / 8;
+      for (let x = 0; x < width; x += step) {
+        ctx.beginPath();
+        ctx.moveTo(x, 0); ctx.lineTo(x, height); ctx.stroke();
+      }
+
+      const lvl = LEVELS[currentLevelIndex];
+
+      // 2. Draw Cobblestone Zones
+      if (lvl.cobblestones) {
+        lvl.cobblestones.forEach(cb => {
+          const cx = cb.x * width;
+          const cy = cb.y * height;
+          const cw = cb.w * width;
+          const ch = cb.h * height;
+
+          ctx.fillStyle = '#292524';
+          ctx.fillRect(cx, cy, cw, ch);
+          ctx.strokeStyle = '#44403c';
+          ctx.lineWidth = 1;
+          ctx.strokeRect(cx, cy, cw, ch);
+
+          // Bruģa akmentiņu raksts
+          const stoneStep = 18;
+          ctx.fillStyle = '#1c1917';
+          for (let sx = cx + 4; sx < cx + cw - 4; sx += stoneStep) {
+            for (let sy = cy + 4; sy < cy + ch - 4; sy += stoneStep) {
+              ctx.beginPath();
+              ctx.arc(sx + (Math.sin(sy) * 3), sy, 5, 0, Math.PI * 2);
+              ctx.fill();
+            }
+          }
+          ctx.fillStyle = 'rgba(214, 211, 209, 0.4)';
+          ctx.font = '9px Inter';
+          ctx.fillText('BRUĢIS', cx + 6, cy + 12);
+        });
+      }
+
+      // 3. Draw Water Streams (Ventas Rumba currents)
+      if (lvl.currents) {
+        lvl.currents.forEach(c => {
+          const cx = c.x * width;
+          const cy = c.y * height;
+          const cw = c.w * width;
+          const ch = c.h * height;
+
+          const waterGrad = ctx.createLinearGradient(cx, cy, cx + cw, cy);
+          waterGrad.addColorStop(0, 'rgba(14, 116, 144, 0.45)');
+          waterGrad.addColorStop(0.5, 'rgba(6, 182, 212, 0.65)');
+          waterGrad.addColorStop(1, 'rgba(14, 116, 144, 0.45)');
+
+          ctx.fillStyle = waterGrad;
+          ctx.fillRect(cx, cy, cw, ch);
+
+          // Animated flowing wave lines
+          ctx.strokeStyle = 'rgba(255, 255, 255, 0.28)';
+          ctx.lineWidth = 2;
+          for (let y = cy + 8; y < cy + ch; y += 14) {
+            ctx.beginPath();
+            for (let x = cx; x <= cx + cw; x += 10) {
+              const waveY = y + Math.sin(x * 0.08 + waterWaveOffset * 2) * 3;
+              if (x === cx) ctx.moveTo(x, waveY);
+              else ctx.lineTo(x, waveY);
+            }
+            ctx.stroke();
+          }
+          ctx.fillStyle = 'rgba(224, 242, 254, 0.8)';
+          ctx.font = '10px Inter font-semibold';
+          ctx.fillText(`🌊 Ventas Straume →`, cx + 8, cy + 14);
+        });
+      }
+
+      // 4. Starting Zone
+      const sx = lvl.start.x * width;
+      const sy = lvl.start.y * height;
+      ctx.strokeStyle = 'rgba(52, 211, 153, 0.6)';
+      ctx.lineWidth = 2;
+      ctx.setLineDash([4, 4]);
+      ctx.beginPath();
+      ctx.arc(sx, sy, ball.radius * 1.8, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.setLineDash([]);
+
+      // 5. Draw Holes (Dark 3D Pits)
+      lvl.holes.forEach(hole => {
+        const hx = hole.x * width;
+        const hy = hole.y * height;
+        const hr = hole.radius * width;
+
+        const pitGrad = ctx.createRadialGradient(hx - lightOffX * 0.3, hy - lightOffY * 0.3, hr * 0.1, hx, hy, hr);
+        pitGrad.addColorStop(0, '#000000');
+        pitGrad.addColorStop(0.7, '#080808');
+        pitGrad.addColorStop(1, '#2c1e18');
+
+        ctx.fillStyle = pitGrad;
+        ctx.beginPath();
+        ctx.arc(hx, hy, hr, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.strokeStyle = 'rgba(239, 68, 68, 0.4)';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+      });
+
+      // 6. Draw Goal (Kuldīga Treasure Rātsnams)
+      const gx = lvl.goal.x * width;
+      const gy = lvl.goal.y * height;
+      const gr = lvl.goal.radius * width;
+
+      const auraGrad = ctx.createRadialGradient(gx, gy, gr * 0.1, gx, gy, gr * 1.2);
+      auraGrad.addColorStop(0, '#fef08a');
+      auraGrad.addColorStop(0.5, 'rgba(234, 179, 8, 0.8)');
+      auraGrad.addColorStop(1, 'rgba(234, 179, 8, 0)');
+
+      ctx.fillStyle = auraGrad;
+      ctx.beginPath();
+      ctx.arc(gx, gy, gr * 1.2, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.lineWidth = 3;
+      ctx.strokeStyle = '#fbbf24';
+      ctx.beginPath();
+      ctx.arc(gx, gy, gr, 0, Math.PI * 2);
+      ctx.stroke();
+
+      ctx.font = `${gr * 0.9}px sans-serif`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText('🏛️', gx, gy);
+
+      // 7. Draw Maze Walls with Dynamic Tilt Shadows
+      lvl.walls.forEach(wall => {
+        const wx = wall.x * width;
+        const wy = wall.y * height;
+        const ww = wall.w * width;
+        const wh = wall.h * height;
+
+        // Dynamic wall drop shadow based on tilt
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.55)';
+        ctx.fillRect(wx + lightOffX, wy + lightOffY, ww, wh);
+
+        // Brick body
+        ctx.fillStyle = '#78350f';
+        ctx.fillRect(wx, wy, ww, wh);
+
+        // 3D Bevel highlight
+        ctx.fillStyle = '#9a3412';
+        ctx.fillRect(wx, wy, ww, 3);
+        ctx.fillRect(wx, wy, 3, wh);
+
+        ctx.strokeStyle = '#451a03';
+        ctx.lineWidth = 1.5;
+        ctx.strokeRect(wx, wy, ww, wh);
+      });
+
+      // 8. Draw Animated Ventas Fishes (Vimbas)
+      if (lvl.fishes) {
+        lvl.fishes.forEach(fish => {
+          let fx = fish.x * width;
+          let fy = fish.y * height;
+          if (fish.rangeX) fx += Math.sin(fish.progress * Math.PI * 2) * (fish.rangeX * width);
+          if (fish.rangeY) fy += Math.sin(fish.progress * Math.PI * 2) * (fish.rangeY * height);
+
+          // Fish shadow
+          ctx.fillStyle = 'rgba(0, 0, 0, 0.35)';
+          ctx.beginPath();
+          ctx.ellipse(fx + 3, fy + 5, 12, 6, 0, 0, Math.PI * 2);
+          ctx.fill();
+
+          // Fish emoji icon
+          ctx.font = `${fish.size * width * 1.5}px sans-serif`;
+          ctx.fillText('🐟', fx, fy);
+        });
+      }
+
+      // 9. Draw Silver Dālderis (Ball) with Rotating Lilija Crest
+      const curRadius = ball.radius * ball.fallScale;
+      if (curRadius > 0.5) {
+        // Dynamic coin shadow
+        if (!ball.isFalling) {
+          ctx.beginPath();
+          ctx.fillStyle = 'rgba(0, 0, 0, 0.45)';
+          ctx.ellipse(ball.x + lightOffX * 0.8, ball.y + lightOffY * 0.8, curRadius * 1.05, curRadius * 0.75, 0, 0, Math.PI * 2);
+          ctx.fill();
+        }
+
+        // Spherical metallic silver gradient
+        const ballGrad = ctx.createRadialGradient(
+          ball.x + lightOffX * 0.4,
+          ball.y + lightOffY * 0.4,
+          curRadius * 0.1,
+          ball.x,
+          ball.y,
+          curRadius
+        );
+        ballGrad.addColorStop(0, '#ffffff');
+        ballGrad.addColorStop(0.35, '#e2e8f0');
+        ballGrad.addColorStop(0.7, '#94a3b8');
+        ballGrad.addColorStop(1, '#334155');
+
+        ctx.fillStyle = ballGrad;
+        ctx.beginPath();
+        ctx.arc(ball.x, ball.y, curRadius, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.strokeStyle = '#f1f5f9';
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+
+        // Embossed spinning crest inside coin
+        ctx.save();
+        ctx.translate(ball.x, ball.y);
+        ctx.rotate(ball.rotation);
+        ctx.fillStyle = 'rgba(51, 65, 85, 0.65)';
+        ctx.font = `bold ${curRadius * 0.95}px serif`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('⚜', 0, 0);
+        ctx.restore();
+      }
+
+      // 10. Draw Particles
+      particles.forEach(p => p.draw(ctx));
+
+      ctx.restore();
+    }
+
+    function gameLoop(timestamp) {
+      if (isGameActive) {
+        updatePhysics();
+        drawGame();
+
+        // Update timer
+        const diff = performance.now() - startTime;
+        const mins = Math.floor(diff / 60000);
+        const secs = Math.floor((diff % 60000) / 1000);
+        const tenths = Math.floor((diff % 1000) / 100);
+        timerDisplay.innerText = `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}.${tenths}`;
+
+        requestAnimationFrame(gameLoop);
+      }
+    }
+  </script>
+
+  <!-- Input and Device Orientation Wiring -->
+  <script>
+    async function requestDeviceOrientationPermission() {
+      sound.init();
+
+      if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
+        try {
+          sensorStatusText.innerText = "Pieprasa atļauju...";
+          const permissionState = await DeviceOrientationEvent.requestPermission();
+          if (permissionState === 'granted') {
+            attachOrientationListener();
+            hideOverlayAndStart();
+          } else {
+            fallbackToButtons();
+          }
+        } catch (err) {
+          fallbackToButtons();
+        }
+      } else if ('DeviceOrientationEvent' in window) {
+        attachOrientationListener();
+        hideOverlayAndStart();
+      } else {
+        fallbackToButtons();
+      }
+    }
+
+    function attachOrientationListener() {
+      window
