@@ -3,180 +3,799 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>Kuldīgas Dārgumu Labirints — Deluxe 3D</title>
+  <title>Ventas Vimbas Lēciens — Kuldīga</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700;900&family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700;900&family=Inter:wght@500;700;800&display=swap" rel="stylesheet">
 
   <style>
-    :root {
-      --tilt-x: 0;
-      --tilt-y: 0;
-    }
     body {
       font-family: 'Inter', sans-serif;
       touch-action: none;
       -webkit-touch-callout: none;
       -webkit-user-select: none;
       user-select: none;
-      background-color: #0c0a09;
+      background-color: #030712;
     }
     .font-ancient {
       font-family: 'Cinzel', serif;
-    }
-    .perspective-stage {
-      perspective: 900px;
-    }
-    .tilt-board {
-      transform-style: preserve-3d;
-      transform: rotateX(calc(var(--tilt-y) * -12deg)) rotateY(calc(var(--tilt-x) * 12deg));
-      transition: transform 0.04s linear;
-      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.85), inset 0 0 35px rgba(0, 0, 0, 0.9);
-    }
-    .wood-bezel {
-      background: radial-gradient(circle at 50% 50%, #291c13 0%, #150d09 100%);
-      border: 6px solid #451a03;
     }
   </style>
 </head>
 <body class="text-stone-100 min-h-screen flex flex-col justify-between overflow-hidden">
 
-  <!-- Header -->
-  <header class="w-full bg-stone-950/80 backdrop-blur border-b border-amber-950/60 px-4 py-2.5 flex items-center justify-between z-20">
+  <!-- Augšējā josla -->
+  <header class="w-full bg-slate-950/80 backdrop-blur border-b border-cyan-900/40 px-4 py-2.5 flex items-center justify-between z-20">
     <div class="flex items-center space-x-2">
-      <span class="text-2xl drop-shadow">🪙</span>
+      <span class="text-2xl drop-shadow">🐟</span>
       <div>
-        <h1 class="font-ancient text-sm sm:text-base font-bold text-amber-400 tracking-wider">Kuldīgas Dārgums</h1>
-        <p class="text-[10px] text-stone-400" id="sensorStatus">Sensors: Neaktīvs</p>
+        <h1 class="font-ancient text-sm sm:text-base font-bold text-amber-400 tracking-wider">Ventas Vimba</h1>
+        <p class="text-[10px] text-cyan-400" id="subStatus">Atvelc zivi, lai lēktu!</p>
       </div>
     </div>
 
-    <div class="flex items-center space-x-4 sm:space-x-6 text-xs sm:text-sm">
+    <div class="flex items-center space-x-4 text-xs sm:text-sm">
       <div class="flex flex-col items-center">
-        <span class="text-[10px] text-stone-400 uppercase font-semibold">Līmenis</span>
-        <span class="font-bold text-amber-300" id="levelDisplay">1 / 3</span>
+        <span class="text-[10px] text-slate-400 uppercase font-semibold">Augstums</span>
+        <span class="font-mono font-bold text-emerald-400" id="heightDisplay">0m / 50m</span>
       </div>
       <div class="flex flex-col items-center">
-        <span class="text-[10px] text-stone-400 uppercase font-semibold">Laiks</span>
-        <span class="font-mono font-bold text-emerald-400" id="timerDisplay">00:00.0</span>
+        <span class="text-[10px] text-slate-400 uppercase font-semibold">Lēcieni</span>
+        <span class="font-mono font-bold text-amber-300" id="jumpsDisplay">3</span>
       </div>
-      <button id="resetBtn" class="bg-stone-800 hover:bg-stone-700 active:scale-95 text-stone-200 px-2.5 py-1 rounded-md text-xs border border-stone-700 transition" title="Pārstartēt līmeni">
-        ↻ Atiestatīt
+      <button id="restartBtn" class="bg-slate-800 hover:bg-slate-700 active:scale-95 text-slate-200 px-2.5 py-1 rounded-md text-xs border border-slate-700 transition">
+        ↻ No jauna
       </button>
     </div>
   </header>
 
-  <!-- 3D Perspective Stage -->
-  <main class="relative flex-1 flex items-center justify-center p-2 sm:p-4 overflow-hidden perspective-stage">
-    <div id="tiltBox" class="relative w-full max-w-md aspect-[3/4] max-h-[75vh] rounded-2xl p-2.5 wood-bezel tilt-board flex items-center justify-center">
-      <canvas id="mazeCanvas" class="w-full h-full rounded-xl bg-stone-950 block shadow-inner"></canvas>
+  <!-- Galvenais Spēles Audekls -->
+  <main class="relative flex-1 flex items-center justify-center p-2 sm:p-4 overflow-hidden">
+    <div class="relative w-full max-w-md h-full max-h-[82vh] rounded-2xl overflow-hidden border-4 border-cyan-950 shadow-2xl bg-slate-900 flex items-center justify-center">
+      <canvas id="gameCanvas" class="w-full h-full block"></canvas>
 
-      <!-- Tilt Visualizer Dot -->
-      <div id="tiltIndicator" class="absolute top-4 right-4 pointer-events-none bg-stone-950/80 border border-amber-900/60 rounded-full w-9 h-9 flex items-center justify-center opacity-85 backdrop-blur">
-        <div id="tiltDot" class="w-2.5 h-2.5 bg-amber-400 rounded-full shadow-[0_0_8px_#f59e0b] transition-transform duration-75"></div>
-      </div>
-
-      <!-- Permission / Start Modal -->
-      <div id="permissionOverlay" class="absolute inset-0 bg-stone-950/92 backdrop-blur-md rounded-2xl flex flex-col items-center justify-center p-6 text-center z-30 transition-opacity">
-        <div class="w-16 h-16 bg-amber-500/10 border-2 border-amber-500 text-amber-400 rounded-2xl flex items-center justify-center text-3xl mb-3 shadow-[0_0_20px_rgba(245,158,11,0.2)]">
-          🏛️
+      <!-- Ievada padoms -->
+      <div id="startOverlay" class="absolute inset-0 bg-slate-950/85 backdrop-blur-sm flex flex-col items-center justify-center p-6 text-center z-30 transition-opacity">
+        <div class="w-16 h-16 bg-cyan-500/10 border-2 border-cyan-500 text-cyan-400 rounded-2xl flex items-center justify-center text-3xl mb-3 shadow-[0_0_25px_rgba(6,182,212,0.3)] animate-pulse">
+          🌊
         </div>
-        <h2 class="text-xl font-bold font-ancient text-amber-300 mb-1">Hercoga Sudraba Dālderis</h2>
-        <p class="text-stone-300 text-xs sm:text-sm mb-5 max-w-xs leading-relaxed">
-          Noliec telefonu, lai ripinātu monētu pāri Ventas rumbas straumēm un Kuldīgas senajam bruģim. Sargies no bedrēm un lēkājošām zivīm!
+        <h2 class="text-xl font-bold font-ancient text-amber-300 mb-1">Pārvari Ventas Rumbu!</h2>
+        <p class="text-slate-300 text-xs sm:text-sm mb-5 max-w-xs leading-relaxed">
+          Pieskaries vimbai, velc atpakaļ kā kaķeni un palaid, lai tā lēktu augšup pret straumi. Piezemējies mierīgajos atvaros un izvairies no zvejnieku groziem!
         </p>
-        <button id="activateSensorsBtn" class="bg-amber-600 hover:bg-amber-500 active:scale-95 text-stone-950 font-bold px-6 py-3 rounded-xl text-sm shadow-lg shadow-amber-600/30 transition flex items-center space-x-2">
-          <span>Ieslēgt kustību sensoru</span>
-          <span>⚡</span>
-        </button>
-        <button id="useFallbackControlsBtn" class="mt-3 text-stone-400 hover:text-stone-200 text-xs underline underline-offset-4">
-          Spēlēt ar ekrāna pogām / klaviatūru
+        <button id="playBtn" class="bg-cyan-600 hover:bg-cyan-500 active:scale-95 text-slate-950 font-extrabold px-7 py-3 rounded-xl text-sm shadow-lg shadow-cyan-600/30 transition flex items-center space-x-2">
+          <span>Sākt Lēcienu</span>
+          <span>🚀</span>
         </button>
       </div>
 
-      <!-- Victory Overlay Modal -->
-      <div id="victoryOverlay" class="hidden absolute inset-0 bg-stone-950/95 backdrop-blur-md rounded-2xl flex flex-col items-center justify-center p-6 text-center z-40">
-        <div class="text-5xl mb-2 animate-bounce">👑</div>
-        <h2 class="text-2xl font-bold font-ancient text-amber-300 mb-1">Dārgums Sasniegts!</h2>
-        <p class="text-xs text-stone-400 mb-4" id="victorySubtitle">Kuldīgas hercoga noslēpums ir atvērts.</p>
+      <!-- Uzvaras / Zaudējuma logs -->
+      <div id="endOverlay" class="hidden absolute inset-0 bg-slate-950/95 backdrop-blur-md flex flex-col items-center justify-center p-6 text-center z-40">
+        <div id="endEmoji" class="text-5xl mb-2">🎉</div>
+        <h2 id="endTitle" class="text-2xl font-bold font-ancient text-amber-300 mb-1">Rumba Pieveikta!</h2>
+        <p id="endSubtitle" class="text-xs text-slate-400 mb-4">Vimba veiksmīgi sasniedza nārsta vietu virs Kuldīgas rumbas.</p>
 
-        <div class="bg-stone-900/90 border border-amber-800/40 rounded-xl p-3.5 w-full max-w-xs mb-5 text-sm">
-          <div class="flex justify-between py-1 border-b border-stone-800">
-            <span class="text-stone-400">Patērētais laiks:</span>
-            <span class="font-mono font-bold text-emerald-400" id="completedTime">00:00.0</span>
-          </div>
-          <div class="flex justify-between py-1 border-b border-stone-800">
-            <span class="text-stone-400">Iekrišanas bedrēs:</span>
-            <span class="font-mono font-bold text-amber-400" id="holeFallsCount">0</span>
+        <div class="bg-slate-900 border border-cyan-900/40 rounded-xl p-3.5 w-full max-w-xs mb-5 text-sm">
+          <div class="flex justify-between py-1 border-b border-slate-800">
+            <span class="text-slate-400">Sasniegtais augstums:</span>
+            <span class="font-mono font-bold text-cyan-400" id="finalHeight">50m</span>
           </div>
           <div class="flex justify-between py-1">
-            <span class="text-stone-400">Statuss:</span>
-            <span class="font-bold text-amber-300" id="levelProgressStatus">Pabeigts</span>
+            <span class="text-slate-400">Veiktie lēcieni:</span>
+            <span class="font-mono font-bold text-amber-300" id="finalJumps">8</span>
           </div>
         </div>
 
-        <button id="nextLevelBtn" class="w-full max-w-xs bg-emerald-600 hover:bg-emerald-500 active:scale-95 text-white font-bold py-3 px-4 rounded-xl text-sm shadow-lg shadow-emerald-700/40 transition">
-          Nākamais Līmenis →
+        <button id="retryBtn" class="w-full max-w-xs bg-cyan-600 hover:bg-cyan-500 active:scale-95 text-slate-950 font-bold py-3 px-4 rounded-xl text-sm shadow-lg shadow-cyan-600/40 transition">
+          Lēkt vēlreiz ↻
         </button>
       </div>
     </div>
   </main>
 
-  <!-- Footer Controls -->
-  <footer class="w-full bg-stone-950/90 border-t border-stone-800 px-4 py-2 flex flex-col sm:flex-row items-center justify-between z-20 gap-2">
-    <div class="text-[11px] text-stone-400 flex items-center space-x-2">
-      <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-      <span id="instructionText">Noliec telefonu, lai vadītu dālderi.</span>
-    </div>
-
-    <!-- On-screen Fallback Controls -->
-    <div id="touchControls" class="flex items-center space-x-1.5 opacity-90 scale-90 sm:scale-100">
-      <button data-dir="left" class="dpad-btn w-9 h-9 bg-stone-800 hover:bg-stone-700 active:bg-amber-600 rounded-lg flex items-center justify-center font-bold text-stone-200 border border-stone-700 text-sm">◀</button>
-      <div class="flex flex-col space-y-1">
-        <button data-dir="up" class="dpad-btn w-9 h-9 bg-stone-800 hover:bg-stone-700 active:bg-amber-600 rounded-lg flex items-center justify-center font-bold text-stone-200 border border-stone-700 text-sm">▲</button>
-        <button data-dir="down" class="dpad-btn w-9 h-9 bg-stone-800 hover:bg-stone-700 active:bg-amber-600 rounded-lg flex items-center justify-center font-bold text-stone-200 border border-stone-700 text-sm">▼</button>
-      </div>
-      <button data-dir="right" class="dpad-btn w-9 h-9 bg-stone-800 hover:bg-stone-700 active:bg-amber-600 rounded-lg flex items-center justify-center font-bold text-stone-200 border border-stone-700 text-sm">▶</button>
-    </div>
+  <footer class="w-full bg-slate-950/90 border-t border-slate-800 px-4 py-2 text-center text-slate-400 text-xs z-20">
+    <span>💡 Padoms: Turi pirkstu uz zivs, lai ieslēgtu lēno kustību un nomērķētu precīzāk.</span>
   </footer>
 
-  <!-- Web Audio Procedural Sound Engine -->
+  <!-- Web Audio Procedurālais Skaņas Dzinējs -->
   <script>
     class SoundEngine {
       constructor() {
         this.ctx = null;
-        this.rollGain = null;
-        this.rollFilter = null;
-        this.cobbleGain = null;
+      }
+      init() {
+        if (!this.ctx) {
+          const AudioContext = window.AudioContext || window.webkitAudioContext;
+          if (AudioContext) this.ctx = new AudioContext();
+        }
+        if (this.ctx && this.ctx.state === 'suspended') {
+          this.ctx.resume();
+        }
+      }
+      stretch(ratio) {
+        if (!this.ctx) return;
+        try {
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+          osc.type = 'sawtooth';
+          osc.frequency.setValueAtTime(100 + ratio * 200, this.ctx.currentTime);
+          gain.gain.setValueAtTime(0.02, this.ctx.currentTime);
+          gain.gain.linearRampToValueAtTime(0.001, this.ctx.currentTime + 0.05);
+          osc.connect(gain);
+          gain.connect(this.ctx.destination);
+          osc.start();
+          osc.stop(this.ctx.currentTime + 0.05);
+        } catch(e){}
+      }
+      launch() {
+        if (!this.ctx) return;
+        try {
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(200, this.ctx.currentTime);
+          osc.frequency.exponentialRampToValueAtTime(650, this.ctx.currentTime + 0.18);
+          gain.gain.setValueAtTime(0.25, this.ctx.currentTime);
+          gain.gain.linearRampToValueAtTime(0.001, this.ctx.currentTime + 0.18);
+          osc.connect(gain);
+          gain.connect(this.ctx.destination);
+          osc.start();
+          osc.stop(this.ctx.currentTime + 0.19);
+        } catch(e){}
+      }
+      splash() {
+        if (!this.ctx) return;
+        try {
+          const bufferSize = this.ctx.sampleRate * 0.2;
+          const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
+          const data = buffer.getChannelData(0);
+          for (let i = 0; i < bufferSize; i++) data[i] = Math.random() * 2 - 1;
+          const noise = this.ctx.createBufferSource();
+          noise.buffer = buffer;
+          const filter = this.ctx.createBiquadFilter();
+          filter.type = 'lowpass';
+          filter.frequency.setValueAtTime(800, this.ctx.currentTime);
+          filter.frequency.exponentialRampToValueAtTime(150, this.ctx.currentTime + 0.2);
+          const gain = this.ctx.createGain();
+          gain.gain.setValueAtTime(0.3, this.ctx.currentTime);
+          gain.gain.linearRampToValueAtTime(0.001, this.ctx.currentTime + 0.2);
+          noise.connect(filter);
+          filter.connect(gain);
+          gain.connect(this.ctx.destination);
+          noise.start();
+        } catch(e){}
+      }
+      hitTrap() {
+        if (!this.ctx) return;
+        try {
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+          osc.type = 'triangle';
+          osc.frequency.setValueAtTime(160, this.ctx.currentTime);
+          osc.frequency.exponentialRampToValueAtTime(50, this.ctx.currentTime + 0.25);
+          gain.gain.setValueAtTime(0.35, this.ctx.currentTime);
+          gain.gain.linearRampToValueAtTime(0.001, this.ctx.currentTime + 0.25);
+          osc.connect(gain);
+          gain.connect(this.ctx.destination);
+          osc.start();
+          osc.stop(this.ctx.currentTime + 0.26);
+        } catch(e){}
+      }
+      victory() {
+        if (!this.ctx) return;
+        try {
+          const notes = [440, 554, 659, 880];
+          notes.forEach((freq, i) => {
+            const osc = this.ctx.createOscillator();
+            const gain = this.ctx.createGain();
+            osc.frequency.setValueAtTime(freq, this.ctx.currentTime + i * 0.1);
+            gain.gain.setValueAtTime(0.2, this.ctx.currentTime + i * 0.1);
+            gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + i * 0.1 + 0.4);
+            osc.connect(gain);
+            gain.connect(this.ctx.destination);
+            osc.start(this.ctx.currentTime + i * 0.1);
+            osc.stop(this.ctx.currentTime + i * 0.1 + 0.42);
+          });
+        } catch(e){}
+      }
+    }
+    const sound = new SoundEngine();
+  </script>
+
+  <!-- Galvenā Spēles Loģika -->
+  <script>
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+    const startOverlay = document.getElementById('startOverlay');
+    const endOverlay = document.getElementById('endOverlay');
+    const playBtn = document.getElementById('playBtn');
+    const retryBtn = document.getElementById('retryBtn');
+    const restartBtn = document.getElementById('restartBtn');
+    const heightDisplay = document.getElementById('heightDisplay');
+    const jumpsDisplay = document.getElementById('jumpsDisplay');
+
+    let width = 0;
+    let height = 0;
+    let isRunning = false;
+    let cameraY = 0; // Skats virzās līdzi zivij augšup
+    const TARGET_HEIGHT = 1600; // Pilnais rumbas augstums pikseļos
+
+    // Zivs (Vimba) stāvoklis
+    let fish = {
+      x: 0,
+      y: 0,
+      vx: 0,
+      vy: 0,
+      radius: 16,
+      angle: 0,
+      inWater: true,
+      currentPool: null
+    };
+
+    // Velkšanas (Slingshot) vadība
+    let isAiming = false;
+    let aimStart = { x: 0, y: 0 };
+    let aimCurrent = { x: 0, y: 0 };
+    let dragVector = { x: 0, y: 0 };
+    let jumpsLeft = 3;
+    let totalJumps = 0;
+
+    // Daļiņas (šļakatas, putas)
+    let particles = [];
+    class WaterParticle {
+      constructor(x, y, vx, vy, color, size = 3, life = 1) {
+        this.x = x; this.y = y; this.vx = vx; this.vy = vy;
+        this.color = color; this.size = size; this.life = life; this.maxLife = life;
+      }
+      update() {
+        this.x += this.vx;
+        this.y += this.vy;
+        this.vy += 0.18; // Gravitācija šļakatām
+        this.life -= 0.03;
+      }
+      draw(c, camY) {
+        if (this.life <= 0) return;
+        c.save();
+        c.globalAlpha = Math.max(0, this.life / this.maxLife);
+        c.fillStyle = this.color;
+        c.beginPath();
+        c.arc(this.x, this.y - camY, this.size, 0, Math.PI * 2);
+        c.fill();
+        c.restore();
+      }
+    }
+
+    function spawnSplash(x, y, count = 15, color = '#67e8f9') {
+      sound.splash();
+      for (let i = 0; i < count; i++) {
+        const angle = -Math.PI / 2 + (Math.random() - 0.5) * 1.8;
+        const spd = Math.random() * 6 + 2;
+        particles.push(new WaterParticle(
+          x, y,
+          Math.cos(angle) * spd,
+          Math.sin(angle) * spd,
+          color,
+          Math.random() * 3.5 + 1.5,
+          0.8 + Math.random() * 0.4
+        ));
+      }
+    }
+
+    // Ventas Līmeņa Arhitektūra (Kaskādes, Atvari, Grozi)
+    let pools = [];
+    let rapids = [];
+    let traps = [];
+    let birds = [];
+
+    function generateRiver() {
+      pools = [];
+      rapids = [];
+      traps = [];
+      birds = [];
+
+      // Sākuma bāzes atvars (lejā)
+      pools.push({ y: 0, h: 140, x: 0.1, w: 0.8, name: "Lejas atvars" });
+
+      // Kaskāžu un atvaru ģenerēšana virzienā uz augšu
+      let currentY = 160;
+      while (currentY < TARGET_HEIGHT - 120) {
+        // Kaskāde (straume uz leju)
+        rapids.push({
+          y: currentY,
+          h: 110,
+          speed: 1.4 + Math.random() * 0.8
+        });
+        currentY += 120;
+
+        // Mierīgs atvars, kur piezemēties
+        const poolW = 0.45 + Math.random() * 0.35;
+        const poolX = 0.08 + Math.random() * (0.84 - poolW);
+        pools.push({
+          y: currentY,
+          h: 90,
+          x: poolX,
+          w: poolW
+        });
+
+        // Hercoga zvejnieku tači (grozi kā šķēršļi)
+        if (Math.random() > 0.3) {
+          traps.push({
+            x: 0.15 + Math.random() * 0.7,
+            y: currentY - 55,
+            radius: 20
+          });
+        }
+
+        // Krauklis, kas lido horizontāli
+        if (Math.random() > 0.5) {
+          birds.push({
+            y: currentY + 30,
+            x: 0,
+            speed: (Math.random() > 0.5 ? 1 : -1) * (1.2 + Math.random() * 1.5)
+          });
+        }
+
+        currentY += 100;
       }
 
-      init() {
-        try {
-          if (!this.ctx) {
-            const AudioContext = window.AudioContext || window.webkitAudioContext;
-            if (!AudioContext) return;
-            this.ctx = new AudioContext();
+      // Finiša mierīgais ezers virs rumbas
+      pools.push({
+        y: TARGET_HEIGHT - 60,
+        h: 220,
+        x: 0.05,
+        w: 0.9,
+        isGoal: true
+      });
+    }
 
-            const bufferSize = this.ctx.sampleRate * 2;
-            const noiseBuffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
-            const output = noiseBuffer.getChannelData(0);
-            let lastOut = 0.0;
-            for (let i = 0; i < bufferSize; i++) {
-              const white = Math.random() * 2 - 1;
-              output[i] = (lastOut + 0.02 * white) / 1.02;
-              lastOut = output[i];
+    function resizeCanvas() {
+      const rect = canvas.getBoundingClientRect();
+      const dpr = window.devicePixelRatio || 1;
+      width = rect.width;
+      height = rect.height;
+      canvas.width = width * dpr;
+      canvas.height = height * dpr;
+      ctx.scale(dpr, dpr);
+
+      if (!isRunning) resetGame();
+    }
+    window.addEventListener('resize', resizeCanvas);
+
+    function resetGame() {
+      generateRiver();
+      fish.x = width * 0.5;
+      fish.y = 70; // Sākuma pozīcija lejas atvarā
+      fish.vx = 0;
+      fish.vy = 0;
+      fish.inWater = true;
+      fish.currentPool = pools[0];
+      cameraY = 0;
+      jumpsLeft = 3;
+      totalJumps = 0;
+      particles = [];
+      updateUI();
+    }
+
+    function updateUI() {
+      const currentM = Math.max(0, Math.floor((fish.y / TARGET_HEIGHT) * 50));
+      heightDisplay.innerText = `${currentM}m / 50m`;
+      jumpsDisplay.innerText = jumpsLeft;
+    }
+
+    // Skārienu / Pelītes apstrāde
+    function getPointerPos(e) {
+      const rect = canvas.getBoundingClientRect();
+      const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+      const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+      return {
+        x: clientX - rect.left,
+        y: clientY - rect.top
+      };
+    }
+
+    function onPointerDown(e) {
+      if (!isRunning) return;
+      sound.init();
+      const pos = getPointerPos(e);
+      const fishScreenY = height - (fish.y - cameraY);
+
+      // Pieskāriena rādiuss ap zivi
+      const dist = Math.hypot(pos.x - fish.x, pos.y - fishScreenY);
+      if (dist < fish.radius * 2.8 && fish.inWater && jumpsLeft > 0) {
+        isAiming = true;
+        aimStart = { x: pos.x, y: pos.y };
+        aimCurrent = { x: pos.x, y: pos.y };
+      }
+    }
+
+    function onPointerMove(e) {
+      if (!isAiming) return;
+      const pos = getPointerPos(e);
+      aimCurrent = { x: pos.x, y: pos.y };
+
+      const dx = aimStart.x - aimCurrent.x;
+      const dy = aimStart.y - aimCurrent.y;
+      const dragDist = Math.hypot(dx, dy);
+
+      // Skārienjutīga spēka ierobežošana
+      const maxDrag = 110;
+      const clampedDist = Math.min(dragDist, maxDrag);
+      const angle = Math.atan2(dy, dx);
+
+      dragVector.x = Math.cos(angle) * (clampedDist / maxDrag) * 16;
+      dragVector.y = Math.sin(angle) * (clampedDist / maxDrag) * 22; // Uz augšu lielāks spēks
+
+      sound.stretch(clampedDist / maxDrag);
+    }
+
+    function onPointerUp() {
+      if (!isAiming) return;
+      isAiming = false;
+
+      const power = Math.hypot(dragVector.x, dragVector.y);
+      if (power > 3) {
+        // Palaižam vimbas lēcienu
+        fish.vx = dragVector.x;
+        fish.vy = dragVector.y;
+        fish.inWater = false;
+        fish.currentPool = null;
+        jumpsLeft--;
+        totalJumps++;
+        sound.launch();
+        spawnSplash(fish.x, fish.y, 20, '#bae6fd');
+        updateUI();
+      }
+      dragVector = { x: 0, y: 0 };
+    }
+
+    canvas.addEventListener('mousedown', onPointerDown);
+    window.addEventListener('mousemove', onPointerMove);
+    window.addEventListener('mouseup', onPointerUp);
+
+    canvas.addEventListener('touchstart', onPointerDown, { passive: true });
+    window.addEventListener('touchmove', onPointerMove, { passive: true });
+    window.addEventListener('touchend', onPointerUp, { passive: true });
+
+    // Fizikas un spēles cikls
+    function updatePhysics() {
+      // Bullet-Time (Lēna kustība, kad tēmē)
+      const timeScale = isAiming ? 0.25 : 1.0;
+
+      // Zivs kustība
+      if (!fish.inWater) {
+        fish.vy -= 0.65 * timeScale; // Gravitācija velk lejup
+        fish.x += fish.vx * timeScale;
+        fish.y += fish.vy * timeScale;
+
+        // Astes leņķis lidojumā
+        fish.angle = Math.atan2(fish.vy, fish.vx);
+
+        // Atlekšana no upes krastiem
+        if (fish.x - fish.radius < 15) {
+          fish.x = 15 + fish.radius;
+          fish.vx = -fish.vx * 0.5;
+        } else if (fish.x + fish.radius > width - 15) {
+          fish.x = width - 15 - fish.radius;
+          fish.vx = -fish.vx * 0.5;
+        }
+
+        // Pārbaude: vai ielēca atvarā (Pool)
+        for (let p of pools) {
+          const px = p.x * width;
+          const pw = p.w * width;
+          if (fish.x >= px && fish.x <= px + pw && fish.y >= p.y && fish.y <= p.y + p.h) {
+            if (fish.vy < 0) { // Iekrīt virzienā uz leju
+              fish.inWater = true;
+              fish.currentPool = p;
+              fish.vx *= 0.2;
+              fish.vy = 0;
+              jumpsLeft = 3; // Atjaunojam lēcienu enerģiju
+              spawnSplash(fish.x, fish.y, 25, '#38bdf8');
+
+              if (p.isGoal) {
+                onVictory();
+                return;
+              }
+              updateUI();
+              break;
             }
+          }
+        }
 
-            const whiteNoise = this.ctx.createBufferSource();
-            whiteNoise.buffer = noiseBuffer;
-            whiteNoise.loop = true;
+        // Sadursme ar zvejnieku groziem (tačiem)
+        for (let t of traps) {
+          const tx = t.x * width;
+          const dist = Math.hypot(fish.x - tx, fish.y - t.y);
+          if (dist < fish.radius + t.radius) {
+            sound.hitTrap();
+            spawnSplash(fish.x, fish.y, 15, '#78350f');
+            fish.vx = (Math.random() - 0.5) * 6;
+            fish.vy = -6; // Atkrīt atpakaļ lejup
+            if (navigator.vibrate) navigator.vibrate([80, 50, 80]);
+            break;
+          }
+        }
+      } else {
+        // Zivs atrodas ūdenī
+        fish.vx *= 0.92;
+        fish.vy *= 0.92;
+        fish.x += fish.vx;
+        fish.y += fish.vy;
+        fish.angle = 0;
 
-            this.rollFilter = this.ctx.createBiquadFilter();
-            this.rollFilter.type = 'lowpass';
-            this.rollFilter.frequency.setValueAtTime(280, this.ctx.currentTime);
+        // Ja izripo ārpus sava atvara robežām — nokrīt kaskādē
+        if (fish.currentPool) {
+          const px = fish.currentPool.x * width;
+          const pw = fish.currentPool.w * width;
+          if (fish.x < px || fish.x > px + pw) {
+            fish.inWater = false;
+            fish.currentPool = null;
+          }
+        }
+      }
 
-            this.rollGain = this.ctx.createGain();
-            this.rollGain.gain.setValueAtTime(0, this.ctx.currentTime);
+      // Kaskāžu straumes ietekme (nes lejā, ja iekritis putās)
+      if (!fish.inWater) {
+        for (let r of rapids) {
+          if (fish.y >= r.y && fish.y <= r.y + r.h) {
+            fish.vy -= r.speed * 0.15; // Straume velk lejā
+            if (Math.random() < 0.3) {
+              particles.push(new WaterParticle(fish.x, fish.y, (Math.random()-0.5)*3, -2, '#e0f2fe', 2, 0.4));
+            }
+          }
+        }
+      }
 
-            whiteNoise.connect(this
+      // Kameras sekošana zivij (gluda pacelšanās)
+      const targetCamY = Math.max(0, fish.y - height * 0.35);
+      cameraY += (targetCamY - cameraY) * 0.08;
+
+      // Zaudējuma nosacījums: ja nokrīt zem ekrāna bez lēcieniem
+      if (fish.y < cameraY - 40 || (jumpsLeft === 0 && fish.inWater && !fish.currentPool?.isGoal)) {
+        if (fish.y < 30) {
+          // Atgriežam sākumā
+          fish.y = 60;
+          fish.inWater = true;
+          jumpsLeft = 3;
+          updateUI();
+        }
+      }
+
+      // Putnu kustība
+      birds.forEach(b => {
+        b.x += b.speed;
+        if (b.x > width + 30) b.x = -30;
+        if (b.x < -30) b.x = width + 30;
+
+        // Ja vimba gaisā aizskar putnu
+        if (!fish.inWater) {
+          const dist = Math.hypot(fish.x - b.x, fish.y - b.y);
+          if (dist < fish.radius + 16) {
+            sound.hitTrap();
+            fish.vy = -7;
+            fish.vx = b.speed * 2;
+            spawnSplash(fish.x, fish.y, 10, '#cbd5e1');
+          }
+        }
+      });
+
+      // Daļiņu atjaunošana
+      particles = particles.filter(p => p.life > 0);
+      particles.forEach(p => p.update());
+    }
+
+    // Zīmēšanas cikls
+    function draw() {
+      ctx.clearRect(0, 0, width, height);
+
+      // 1. Upes gultne un krasti (Kuldīgas dolomīts)
+      ctx.fillStyle = '#0f172a';
+      ctx.fillRect(0, 0, width, height);
+
+      // Dolomīta krasti malās
+      ctx.fillStyle = '#334155';
+      ctx.fillRect(0, 0, 14, height);
+      ctx.fillRect(width - 14, 0, 14, height);
+
+      // 2. Kaskādes (Ventas Rumbas krāces ar putojošu ūdeni)
+      rapids.forEach(r => {
+        const screenY = height - (r.y + r.h - cameraY);
+        const rH = r.h;
+
+        // Plūstoša ūdens fons
+        const grad = ctx.createLinearGradient(0, screenY, 0, screenY + rH);
+        grad.addColorStop(0, '#0284c7');
+        grad.addColorStop(0.5, '#38bdf8');
+        grad.addColorStop(1, '#0369a1');
+        ctx.fillStyle = grad;
+        ctx.fillRect(14, screenY, width - 28, rH);
+
+        // Putojošas kaskāžu līnijas
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
+        for (let i = 0; i < 4; i++) {
+          const py = screenY + (i * 28 + (Date.now() * 0.08) % 28);
+          if (py < screenY + rH) {
+            ctx.fillRect(16, py, width - 32, 4);
+          }
+        }
+      });
+
+      // 3. Mierīgie Atvari (Pools kur piezemēties)
+      pools.forEach(p => {
+        const screenY = height - (p.y + p.h - cameraY);
+        const px = p.x * width;
+        const pw = p.w * width;
+
+        // Atvara rāmais dziļais ūdens
+        const poolGrad = ctx.createRadialGradient(px + pw/2, screenY + p.h/2, 10, px + pw/2, screenY + p.h/2, pw/2);
+        if (p.isGoal) {
+          poolGrad.addColorStop(0, '#065f46');
+          poolGrad.addColorStop(1, '#047857');
+        } else {
+          poolGrad.addColorStop(0, '#0369a1');
+          poolGrad.addColorStop(1, '#075985');
+        }
+
+        ctx.fillStyle = poolGrad;
+        ctx.beginPath();
+        ctx.roundRect(px, screenY, pw, p.h, 20);
+        ctx.fill();
+
+        ctx.strokeStyle = p.isGoal ? '#34d399' : '#38bdf8';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+
+        ctx.fillStyle = p.isGoal ? '#a7f3d0' : '#bae6fd';
+        ctx.font = 'bold 10px Inter';
+        ctx.textAlign = 'center';
+        ctx.fillText(p.isGoal ? '🏆 FINIŠS: VIRS RUMBAS' : 'MIERĪGS ATVARS', px + pw/2, screenY + p.h/2 + 4);
+      });
+
+      // 4. Zvejnieku tači (Grozi)
+      traps.forEach(t => {
+        const tx = t.x * width;
+        const ty = height - (t.y - cameraY);
+
+        ctx.fillStyle = '#78350f';
+        ctx.beginPath();
+        ctx.arc(tx, ty, t.radius, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = '#d97706';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+
+        ctx.font = '16px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('🧺', tx, ty);
+      });
+
+      // 5. Putni (Kraukļi)
+      birds.forEach(b => {
+        const by = height - (b.y - cameraY);
+        ctx.font = '18px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText('🦅', b.x, by);
+      });
+
+      // 6. Mērķēšanas trajektorija (Slingshot līnija)
+      if (isAiming) {
+        const fishScreenY = height - (fish.y - cameraY);
+
+        // Elastīgā stieple
+        ctx.strokeStyle = 'rgba(251, 191, 36, 0.8)';
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.moveTo(fish.x, fishScreenY);
+        ctx.lineTo(fish.x - dragVector.x * 2.5, fishScreenY + dragVector.y * 2.5);
+        ctx.stroke();
+
+        // Paredzamā lidojuma trajektorijas punktiņi
+        let simX = fish.x;
+        let simY = fish.y;
+        let simVx = dragVector.x;
+        let simVy = dragVector.y;
+
+        ctx.fillStyle = '#fde047';
+        for (let step = 0; step < 14; step++) {
+          simVy -= 0.65;
+          simX += simVx;
+          simY += simVy;
+          const ptScreenY = height - (simY - cameraY);
+          ctx.beginPath();
+          ctx.arc(simX, ptScreenY, 3.5 - step * 0.18, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      }
+
+      // 7. Zīmējam VIMBU
+      const fishScreenY = height - (fish.y - cameraY);
+      ctx.save();
+      ctx.translate(fish.x, fishScreenY);
+      ctx.rotate(-fish.angle);
+
+      // Zivs ķermenis (Sudrabaini zila vimba)
+      const bodyGrad = ctx.createLinearGradient(-fish.radius, 0, fish.radius, 0);
+      bodyGrad.addColorStop(0, '#94a3b8');
+      bodyGrad.addColorStop(0.5, '#f1f5f9');
+      bodyGrad.addColorStop(1, '#38bdf8');
+      ctx.fillStyle = bodyGrad;
+
+      ctx.beginPath();
+      ctx.ellipse(0, 0, fish.radius * 1.3, fish.radius * 0.75, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = '#0284c7';
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+
+      // Aste
+      ctx.fillStyle = '#f43f5e';
+      ctx.beginPath();
+      ctx.moveTo(-fish.radius * 1.1, 0);
+      ctx.lineTo(-fish.radius * 1.7, -7);
+      ctx.lineTo(-fish.radius * 1.7, 7);
+      ctx.closePath();
+      ctx.fill();
+
+      // Acs
+      ctx.fillStyle = '#0f172a';
+      ctx.beginPath();
+      ctx.arc(fish.radius * 0.7, -2, 2.5, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.restore();
+
+      // 8. Šļakatu daļiņas
+      particles.forEach(p => p.draw(ctx, cameraY));
+    }
+
+    function gameLoop() {
+      if (isRunning) {
+        updatePhysics();
+        draw();
+        requestAnimationFrame(gameLoop);
+      }
+    }
+
+    function onVictory() {
+      isRunning = false;
+      sound.victory();
+      if (navigator.vibrate) navigator.vibrate([100, 50, 100, 50, 200]);
+
+      document.getElementById('endTitle').innerText = "Rumba Pieveikta! 🏆";
+      document.getElementById('endSubtitle').innerText = "Ventas vimba veiksmīgi pārvarēja kaskādes!";
+      document.getElementById('finalHeight').innerText = "50m (Virs Rumbas)";
+      document.getElementById('finalJumps').innerText = totalJumps;
+      endOverlay.classList.remove('hidden');
+    }
+
+    playBtn.addEventListener('click', () => {
+      sound.init();
+      startOverlay.classList.add('opacity-0', 'pointer-events-none');
+      setTimeout(() => startOverlay.style.display = 'none', 300);
+      isRunning = true;
+      resetGame();
+      requestAnimationFrame(gameLoop);
+    });
+
+    retryBtn.addEventListener('click', () => {
+      endOverlay.classList.add('hidden');
+      isRunning = true;
+      resetGame();
+      requestAnimationFrame(gameLoop);
+    });
+
+    restartBtn.addEventListener('click', () => {
+      sound.init();
+      endOverlay.classList.add('hidden');
+      resetGame();
+    });
+
+    window.onload = () => {
+      resizeCanvas();
+      draw();
+    };
+  </script>
+</body>
+</html>
